@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>기니또 - Supabase 멀티유저</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: "Pretendard","Noto Sans KR",sans-serif; background:#f6f8fc; color:#1f2a44; margin:0; }
+    .container { max-width:1000px; margin:0 auto; padding:24px; }
+    .card { background:#fff; border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 3px 12px rgba(31,42,68,.08); }
+    .hidden { display:none !important; }
+    .grid { display:grid; gap:12px; }
+    .two { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); }
+    label { display:block; margin:8px 0 6px; font-weight:600; }
+    input, textarea, button { font:inherit; }
+    input, textarea { width:100%; box-sizing:border-box; border:1px solid #d6dbe5; border-radius:10px; padding:10px; }
+    textarea { min-height:88px; }
+    button { background:#3557ff; color:#fff; border:none; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:700; }
+    button.danger { background:#e43f5a; }
+    .muted { color:#5f6c89; font-size:14px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid #eef1f6; padding:10px; text-align:left; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎵 기니또 (Supabase 멀티유저)</h1>
+  <p class="muted">이제 각자 다른 기기에서 같은 DB를 보며 로그인할 수 있습니다.</p>
+
+  <section class="card" id="dbConfig">
+    <h2>0) Supabase 연결</h2>
+    <p class="muted">Supabase Project URL/anon key 입력 후 연결하세요. (브라우저에 저장됨)</p>
+    <label>Supabase URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" />
+    <label>Supabase anon key</label><input id="sbKey" placeholder="ey..." />
+    <button id="connectBtn" style="margin-top:10px;">연결하기</button>
+    <p class="muted" id="connStatus">연결 안 됨</p>
+  </section>
+
+  <section class="card" id="loginCard">
+    <h2>1) 로그인</h2>
+    <label>이름</label><input id="loginName" />
+    <label>비밀번호</label><input id="loginPassword" type="password" />
+    <button id="loginBtn" style="margin-top:10px;">로그인</button>
+    <button id="logoutBtn" class="hidden" style="margin-top:10px;background:#e9eeff;color:#3557ff;">로그아웃</button>
+    <p id="whoami" class="muted">현재 로그인: 없음</p>
+  </section>
+
+  <section class="card hidden" id="adminPanel">
+    <h2>관리자 화면</h2>
+    <div class="grid two">
+      <div>
+        <h3>멤버 등록</h3>
+        <label>이름</label><input id="memberName" />
+        <label>비밀번호</label><input id="memberPassword" type="password" />
+        <label>기도제목</label><textarea id="memberTopic"></textarea>
+        <button id="addMemberBtn">추가</button>
+      </div>
+      <div>
+        <h3>기니또 배정</h3>
+        <button id="assignBtn">배정하기</button>
+      </div>
+    </div>
+    <div id="adminTable" style="margin-top:12px;"></div>
+  </section>
+
+  <section class="card hidden" id="memberPanel">
+    <h2>멤버 화면</h2>
+    <div id="myTarget" class="muted"></div>
+
+    <h3>나를 위해 기도하는 사람에게 편지 (실명)</h3>
+    <textarea id="toGiver"></textarea>
+    <button id="sendToGiver">보내기</button>
+
+    <h3 style="margin-top:12px;">내가 기도하는 사람에게 편지 (익명)</h3>
+    <textarea id="toTarget"></textarea>
+    <button id="sendToTarget">익명 보내기</button>
+
+    <h3 style="margin-top:12px;">내 받은 편지</h3>
+    <div id="inbox"></div>
+  </section>
+</div>
+
+<script>
+let supabase = null;
+let sessionUser = null;
+const el = (id) => document.getElementById(id);
+
+const savedUrl = localStorage.getItem("sb-url") || "";
+const savedKey = localStorage.getItem("sb-key") || "";
+el("sbUrl").value = savedUrl;
+el("sbKey").value = savedKey;
+if (savedUrl && savedKey) initSupabase(savedUrl, savedKey);
+
+function initSupabase(url, key) {
+  supabase = window.supabase.createClient(url, key);
+  localStorage.setItem("sb-url", url);
+  localStorage.setItem("sb-key", key);
+  el("connStatus").textContent = "연결됨";
+}
+
+el("connectBtn").addEventListener("click", async () => {
+  const url = el("sbUrl").value.trim();
+  const key = el("sbKey").value.trim();
+  if (!url || !key) return alert("URL/Key를 입력하세요.");
+  initSupabase(url, key);
+  await healthCheck();
+});
+
+async function healthCheck() {
+  const { error } = await supabase.from("profiles").select("id").limit(1);
+  if (error) alert("DB 연결은 되었지만 profiles 테이블 확인 실패: " + error.message);
+}
+
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+el("loginBtn").addEventListener("click", async () => {
+  if (!supabase) return alert("먼저 Supabase 연결하세요.");
+  const name = el("loginName").value.trim();
+  const password = el("loginPassword").value;
+  const { data, error } = await supabase.from("profiles").select("*").eq("name", name).eq("password", password).single();
+  if (error || !data) return alert("로그인 실패");
+  sessionUser = data;
+  render();
+});
+
+el("logoutBtn").addEventListener("click", () => { sessionUser = null; render(); });
+
+el("addMemberBtn").addEventListener("click", async () => {
+  if (!sessionUser || sessionUser.role !== "admin") return;
+  const name = el("memberName").value.trim();
+  const password = el("memberPassword").value;
+  const prayer_topic = el("memberTopic").value.trim();
+  if (!name || !password) return alert("이름/비번 입력");
+  const { error } = await supabase.from("profiles").insert({ name, password, role: "member", prayer_topic });
+  if (error) return alert(error.message);
+  el("memberName").value = ""; el("memberPassword").value = ""; el("memberTopic").value = "";
+  await renderAdmin();
+});
+
+el("assignBtn").addEventListener("click", async () => {
+  if (!sessionUser || sessionUser.role !== "admin") return;
+  const { data: members, error } = await supabase.from("profiles").select("id,name").eq("role","member");
+  if (error) return alert(error.message);
+  if (members.length < 2) return alert("최소 2명 필요");
+  const shuffled = shuffle(members);
+  const rotated = [...shuffled.slice(1), shuffled[0]];
+  for (let i=0;i<shuffled.length;i++) {
+    await supabase.from("profiles").update({ target_id: rotated[i].id }).eq("id", shuffled[i].id);
+  }
+  alert("배정 완료");
+  await renderAdmin();
+});
+
+el("sendToGiver").addEventListener("click", async () => {
+  const msg = el("toGiver").value.trim(); if(!msg) return;
+  const { data: giver } = await supabase.from("profiles").select("id").eq("target_id", sessionUser.id).single();
+  if (!giver) return alert("아직 배정 없음");
+  await supabase.from("letters").insert({ sender_name: sessionUser.name, receiver_id: giver.id, message: msg, anonymous: false });
+  el("toGiver").value = "";
+  await renderMember();
+});
+
+el("sendToTarget").addEventListener("click", async () => {
+  const msg = el("toTarget").value.trim(); if(!msg) return;
+  await supabase.from("letters").insert({ sender_name: "익명", receiver_id: sessionUser.target_id, message: msg, anonymous: true });
+  el("toTarget").value = "";
+  await renderMember();
+});
+
+async function renderAdmin() {
+  const { data } = await supabase.from("profiles").select("id,name,prayer_topic,target_id").eq("role","member");
+  const byId = Object.fromEntries(data.map(m => [m.id, m]));
+  el("adminTable").innerHTML = `<table><thead><tr><th>이름</th><th>기도제목</th><th>기도할 대상</th></tr></thead><tbody>${data.map(m => `<tr><td>${m.name}</td><td>${m.prayer_topic||"-"}</td><td>${byId[m.target_id]?.name||"미배정"}</td></tr>`).join("")}</tbody></table>`;
+}
+
+async function renderMember() {
+  const { data: me } = await supabase.from("profiles").select("*").eq("id", sessionUser.id).single();
+  sessionUser = me;
+  const { data: target } = me.target_id ? await supabase.from("profiles").select("name,prayer_topic").eq("id", me.target_id).single() : { data: null };
+  el("myTarget").textContent = target ? `내가 기도할 사람: ${target.name} / 기도제목: ${target.prayer_topic || "-"}` : "아직 배정 전입니다.";
+
+  const { data: letters } = await supabase.from("letters").select("sender_name,message,created_at").eq("receiver_id", me.id).order("created_at",{ascending:false});
+  el("inbox").innerHTML = letters?.length ? letters.map(l => `<div class='card'><div class='muted'>${l.sender_name} · ${new Date(l.created_at).toLocaleString("ko-KR")}</div><div>${l.message}</div></div>`).join("") : "<p class='muted'>받은 편지가 없습니다.</p>";
+}
+
+async function render() {
+  el("whoami").textContent = `현재 로그인: ${sessionUser ? `${sessionUser.name} (${sessionUser.role})` : "없음"}`;
+  el("logoutBtn").classList.toggle("hidden", !sessionUser);
+  const isAdmin = sessionUser?.role === "admin";
+  const isMember = sessionUser?.role === "member";
+  el("adminPanel").classList.toggle("hidden", !isAdmin);
+  el("memberPanel").classList.toggle("hidden", !isMember);
+  if (isAdmin) await renderAdmin();
+  if (isMember) await renderMember();
+}
+
+render();
+</script>
+</body>
+</html>
