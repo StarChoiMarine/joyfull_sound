@@ -1,0 +1,2 @@
+import { describe,expect,it } from 'vitest'; import { starPosition,upsertCheckin } from './sky';
+describe('기도의 밤하늘',()=>{it('같은 날짜와 공개 id의 위치는 안정적이다',()=>expect(starPosition('2026-07-18','a')).toEqual(starPosition('2026-07-18','a')));it('같은 날 반복 기도는 별을 늘리지 않고 밝기를 3단계로 제한한다',()=>{let rows=upsertCheckin([],'u1','2026-07-18','a');rows=upsertCheckin(rows,'u1','2026-07-18','b');rows=upsertCheckin(rows,'u1','2026-07-18','c');rows=upsertCheckin(rows,'u1','2026-07-18','d');expect(rows).toHaveLength(1);expect(rows[0].count).toBe(3)})});

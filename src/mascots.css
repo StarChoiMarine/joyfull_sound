@@ -1,0 +1,6 @@
+/* 화면별로 사용자가 직접 분리한 투명 캐릭터 원본을 사용 */
+.sheep-guide .sheep-pose{border-radius:0;background-color:transparent;background-repeat:no-repeat;background-size:contain;background-position:center;filter:drop-shadow(0 7px 10px rgba(3,7,28,.22))}
+.sheep-guide.wave .sheep-pose{background-image:url('/sheep-wave-transparent.png')}
+.sheep-guide.pray .sheep-pose{background-image:url('/sheep-pray.png')}
+.sheep-guide.letter .sheep-pose{background-image:url('/sheep-letter.png')}
+.sheep-guide.celebrate .sheep-pose{background-image:url('/sheep-celebrate.png')}

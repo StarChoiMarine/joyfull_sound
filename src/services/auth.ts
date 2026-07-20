@@ -1,0 +1,1 @@
+import type { Member } from '../domain/types'; export interface AuthService{signInWithKakao(inviteToken:string):Promise<void>;signOut():Promise<void>;getCurrentMember():Promise<Member|null>} export const isDevMode=(import.meta.env.VITE_APP_MODE??'dev')==='dev';

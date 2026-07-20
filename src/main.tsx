@@ -1,0 +1,1 @@
+import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; import App from './App'; import './styles.css'; import './theme.css'; import './intro.css'; import './mascots.css'; import './prayer-profile.css'; import './letters.css'; createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);

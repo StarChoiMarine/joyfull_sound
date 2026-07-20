@@ -1,0 +1,3 @@
+.prayer-avatar{width:132px;height:132px;margin:0 auto 22px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:linear-gradient(145deg,#a995ff,#514a98);border:4px solid rgba(205,195,255,.3);box-shadow:0 0 0 8px rgba(139,112,245,.08),0 18px 40px rgba(1,4,24,.32)}
+.prayer-avatar img{width:100%;height:100%;object-fit:cover;display:block}.prayer-avatar>span{font-size:40px;font-weight:800;color:#fff}
+.pray-page .counter{margin:28px 0 8px;text-align:left;color:#d9d3ff;font-size:16px;font-weight:750;letter-spacing:-.01em}.pray-page .focus-card{margin-top:8px}.theme-day .prayer-avatar{border-color:rgba(255,255,255,.7);box-shadow:0 0 0 8px rgba(70,110,86,.08),0 18px 34px rgba(51,92,73,.18)}.theme-day .pray-page .counter{color:#294e5a}

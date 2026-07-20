@@ -1,0 +1,2 @@
+export type Role='member'|'admin'; export type Tab='home'|'pray'|'sky'|'mail'|'profile';
+export interface Member{id:string;name:string;role:Role;initial:string;avatarUrl?:string} export interface PrayerTopic{id:string;ownerId:string;body:string;isCompleted:boolean;createdAt:string} export interface Assignment{giverId:string;targetId:string} export interface Checkin{memberId:string;date:string;count:number;lastAt:string;publicId:string} export interface Letter{id:string;senderId:string;receiverId:string;message:string;createdAt:string;readAt?:string}
